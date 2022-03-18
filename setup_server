@@ -1,0 +1,12 @@
+cp update_veloren_server /usr/bin/update_veloren_server
+
+cp veloren-server.service /etc/systemd/system
+cp oneshot-update-veloren.service /etc/systemd/system
+cp veloren-server.timer /etc/systemd/system
+
+
+systemctl enable veloren-server.service
+systemctl start veloren-server.service
+
+systemctl enable veloren-server.timer
+systemctl start veloren-server.timer

@@ -1,0 +1,9 @@
+[Unit]
+Description=Run update_veloren_server periodically
+
+[Timer]
+Unit=oneshot-update-veloren.service
+OnCalendar=*:0/15
+
+[Install]
+WantedBy=timers.target
