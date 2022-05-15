@@ -1,9 +1,22 @@
-cp update_veloren_server /usr/bin/update_veloren_server
+#!/bin/sh
+cp -v assets/veloren-server/update_veloren_server /usr/bin/update_veloren_server
 
-cp veloren-server.service /etc/systemd/system
-cp oneshot-update-veloren.service /etc/systemd/system
-cp veloren-server.timer /etc/systemd/system
+cp -v assets/veloren-server/veloren-server.service /etc/systemd/system
+cp -v assets/veloren-server/oneshot-update-veloren.service /etc/systemd/system
+cp -v assets/veloren-server/veloren-server.timer /etc/systemd/system
 
+read -p "Do you wish to install Telegram Oracle (Y/n)? " yn
+case $yn in
+[Nn]*) exit ;;
+*)
+  (
+    cd assets/telegram-msg
+    ./setup-telegram-msg
+  )
+  sed -i '/^StartLimitIntervalSec=0/a OnFailure=unit-status-telegram@%n.service' /etc/systemd/system/veloren-server.service
+  break
+  ;;
+esac
 
 systemctl enable veloren-server.service
 systemctl start veloren-server.service

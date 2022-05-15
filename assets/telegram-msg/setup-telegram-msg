@@ -1,0 +1,16 @@
+#!/bin/sh
+printf "This is the setup for the server oracle. A tool that sends a message on Telegram if anything goes wrong. For it to properly work, you should create a bot using @botfather on Telegram.\n\n"
+
+printf "Please, provide the Bot API Key:"
+read API_KEY
+
+printf "Now, provide the Chat ID (You can get it by navigating to https://api.telegram.org/bot$API_KEY/getUpdates):"
+read CHAT_ID
+
+echo "Storing in /etc/telegram/key"
+
+mkdir -p /etc/telegram
+printf "API_KEY=%s\nCHAT_ID=%s\n" $API_KEY $CHAT_ID >/etc/telegram/key
+pwd
+cp -v ./telegram-msg ./unit-status-telegram /usr/bin/
+cp -v ./unit-status-telegram@.service /etc/systemd/system/
