@@ -1,0 +1,7 @@
+#!/bin/bash
+
+# This file should contain $TELEGRAM_KEY and $CHAT_ID
+source /etc/telegram/key
+
+URL="https://api.telegram.org/bot$TELEGRAM_KEY/sendMessage"
+curl -s -d "chat_id=$CHAT_ID&disable_web_page_preview=1&text=$1" $URL > /dev/null
