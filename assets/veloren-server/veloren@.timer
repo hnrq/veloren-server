@@ -1,0 +1,9 @@
+[Unit]
+Description=Check for updates periodically
+
+[Timer]
+Unit=oneshot-veloren@%i.service
+OnCalendar=*:0/15
+
+[Install]
+WantedBy=timers.target

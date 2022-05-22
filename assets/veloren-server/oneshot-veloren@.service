@@ -1,0 +1,9 @@
+[Unit]
+Description=One shot update Veloren server
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/update-veloren -t %i
+
+[Install]
+WantedBy=multi-user.target

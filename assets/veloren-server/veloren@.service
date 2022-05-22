@@ -1,0 +1,32 @@
+[Unit]
+Description=Veloren Server - %i
+After=network.target
+ConditionPathExists=/srv/veloren/%i
+  
+[Service]
+WorkingDirectory=/srv/veloren/%i
+
+Sockets=veloren@%i.socket
+StandardInput=socket
+StandardOutput=journal
+StandardError=journal
+
+PrivateUsers=true
+ProtectSystem=full
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+NoNewPrivileges=true
+
+Restart=on-failure
+RestartSec=60s
+
+ExecStart=veloren-server-cli
+ExecStop=/bin/sh -c "/bin/echo "shutdown immediate" > /srv/veloren/%i/systemd.stdin"
+
+# this is necessary to keep systemd from killing the process before it exits after ExecStop is called
+KillSignal=SIGCONT
+
+[Install]
+WantedBy=multi-user.target

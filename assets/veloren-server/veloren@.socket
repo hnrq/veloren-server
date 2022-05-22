@@ -1,0 +1,10 @@
+[Unit]
+BindsTo=veloren@%i.service
+
+[Socket]
+ListenFIFO=/srv/veloren/%i/systemd.stdin
+Service=veloren@%i.service
+SocketUser=veloren
+SocketGroup=veloren
+RemoveOnStop=true
+SocketMode=0600
