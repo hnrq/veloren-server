@@ -20,8 +20,5 @@ esac
 systemctl enable "veloren@$SERVER_NAME.service"
 systemctl start "veloren@$SERVER_NAME.service"
 
-systemctl enable "veloren@$SERVER_NAME.socket"
-systemctl start "veloren@$SERVER_NAME.socket"
-
 systemctl enable "veloren@$SERVER_NAME.timer"
 systemctl start "veloren@$SERVER_NAME.timer"
