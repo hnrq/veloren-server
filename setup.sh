@@ -1,7 +1,7 @@
 #!/bin/sh
 cp -v assets/veloren-server/update-veloren /usr/bin/update-veloren
 
-cp -v assets/veloren-server/*.{service,timer,socket} /etc/systemd/system
+cp -v assets/veloren-server/*.{service,timer,socket} /etc/systemd/system 2>/dev/null
 
 read -e -p "Provide a server name:" -i "production" SERVER_NAME
 
