@@ -1,12 +1,12 @@
 #!/bin/bash
 
-while getopts ":f:t:" opt; do
+while getopts ":f:n:" opt; do
     case $opt in
     f)
         FORCE_UPDATE="true"
         ;;
-    t)
-        TARGET_SERVER="$OPTARG"
+    n)
+        SERVER_NAME="$OPTARG"
         ;;
     \?)
         echo "Invalid option -$OPTARG" >&2
@@ -23,28 +23,28 @@ while getopts ":f:t:" opt; do
 done
 
 REMOTE_VER="$(curl -s 'https://download.veloren.net/version/linux/aarch64/nightly')"
-SERVER_DIR="/srv/veloren/${TARGET_SERVER:-"production"}"
+DIR="/srv/veloren/${SERVER_NAME:-"production"}"
 FORCE_UPDATE="false"
 FILENAME="veloren-aarch64"
-CURRENT_VER=$(cat "$SERVER_DIR"/version 2>&-)
+CURRENT_VER=$(cat "$DIR"/version 2>&-)
 
-mkdir -p "$SERVER_DIR"
+mkdir -p "$DIR"
 
 if [[ $REMOTE_VER == $CURRENT_VER && $FORCE_UPDATE == "false" ]]; then
     echo -e "\e[32m\e[1mYour server is up-to-date :)\e[0m"
 else
-    echo "$REMOTE_VER" >"$SERVER_DIR"/version
+    echo "$REMOTE_VER" >"$DIR"/version
 
-    (cd "$SERVER_DIR" && curl -L -o $FILENAME --connect-timeout 300 \
+    (cd "$DIR" && curl -L -o $FILENAME --connect-timeout 300 \
         --max-time 300 \
         --retry 300 \
         --retry-delay 5 \
         'https://download.veloren.net/latest/linux/x86_64/nightly')
 
-    (cd "$SERVER_DIR" && unzip -qo $FILENAME)
-    (cd "$SERVER_DIR" && rm -rf $FILENAME)
+    (cd "$DIR" && unzip -qo $FILENAME)
+    (cd "$DIR" && rm -rf $FILENAME)
 
-    systemctl restart veloren@.service
+    systemctl restart "veloren@$SERVER_NAME.service"
 
     echo -e "\e[32m\e[1mSuccessfully updated server to latest version ($REMOTE_VER)\e[0m"
 fi

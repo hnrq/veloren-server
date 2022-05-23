@@ -22,7 +22,7 @@ NoNewPrivileges=true
 Restart=on-failure
 RestartSec=60s
 
-ExecStart=veloren-server-cli
+ExecStart=/srv/veloren/%i/veloren-server-cli
 ExecStop=/bin/sh -c "/bin/echo "shutdown immediate" > /srv/veloren/%i/systemd.stdin"
 
 # this is necessary to keep systemd from killing the process before it exits after ExecStop is called
