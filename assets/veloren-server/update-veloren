@@ -32,6 +32,7 @@ mkdir -p "$DIR"
 
 if [[ $REMOTE_VER == $CURRENT_VER && $FORCE_UPDATE == "false" ]]; then
     echo -e "\e[32m\e[1mYour server is up-to-date :)\e[0m"
+    exit 1
 else
     echo "$REMOTE_VER" >"$DIR"/version
 
@@ -44,7 +45,6 @@ else
     (cd "$DIR" && unzip -qo $FILENAME)
     (cd "$DIR" && rm -rf $FILENAME)
 
-    systemctl restart "veloren@$SERVER_NAME.service"
-
     echo -e "\e[32m\e[1mSuccessfully updated server to latest version ($REMOTE_VER)\e[0m"
+    exit 0
 fi

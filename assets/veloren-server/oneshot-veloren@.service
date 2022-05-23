@@ -4,6 +4,7 @@ Description=One shot update Veloren server
 [Service]
 Type=oneshot
 ExecStart=/usr/bin/update-veloren -t %i
+ExecStartPost=/bin/systemctl restart veloren@%i.service
 
 [Install]
 WantedBy=multi-user.target
