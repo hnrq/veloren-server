@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 cp -v assets/veloren-server/update-veloren /usr/bin/update-veloren
 
 cp -v assets/veloren-server/*.{service,timer,socket} /etc/systemd/system 2>/dev/null
