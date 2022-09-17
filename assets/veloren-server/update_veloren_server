@@ -1,6 +1,6 @@
 #!/bin/bash
 
-REMOTE_VER="$(curl -s 'https://download.veloren.net/version/linux/aarch64/nightly')"
+REMOTE_VER="$(curl -s 'https://download.veloren.net/version/linux/aarch64/weekly')"
 REMOTE_DIR="/usr/veloren"
 FORCE_UPDATE="false"
 FILENAME="veloren-aarch64"
@@ -28,7 +28,7 @@ else
         --max-time 30 \
         --retry 300 \
         --retry-delay 5 \
-        'https://download.veloren.net/latest/linux/aarch64/nightly')
+        'https://download.veloren.net/latest/linux/aarch64/weekly')
 
     (cd $REMOTE_DIR && unzip -qo $FILENAME)
     (cd $REMOTE_DIR && rm -rf $FILENAME)
