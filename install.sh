@@ -10,9 +10,9 @@ check_privileges() {
 
 setup_update_script() {
   SCRIPT_LOCATION="/usr/bin/update_veloren_server" # this is where the update script will be installed
-
+  INSTALL_DIR=$1
   echo "Creating update script at $SCRIPT_LOCATION..."
-  ./scripts/veloren-server/setup_update_script.sh $VELOREN_INSTALL_DIR $SCRIPT_LOCATION
+  ./scripts/veloren-server/setup_update_script.sh "$INSTALL_DIR" $SCRIPT_LOCATION
   chmod +x $SCRIPT_LOCATION
   echo "Done!"
 
@@ -32,8 +32,10 @@ server_exists() {
 }
 
 setup_systemd_services() {
+  INSTALL_DIR=$1
+
   echo "Creating systemd service files..."
-  ./scripts/veloren-server/setup_services.sh $VELOREN_INSTALL_DIR
+  ./scripts/veloren-server/setup_services.sh "$INSTALL_DIR"
   echo "Done!"
 }
 
@@ -69,5 +71,6 @@ read -r "Please enter the directory you want to install the server to (default: 
 VELOREN_INSTALL_DIR=${VELOREN_INSTALL_DIR:-/usr/veloren-server}
 
 server_exists "$VELOREN_INSTALL_DIR"
-setup_update_script
-setup_services
+setup_update_script "$VELOREN_INSTALL_DIR"
+setup_systemd_services "$VELOREN_INSTALL_DIR"
+enable_systemd_services

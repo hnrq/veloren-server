@@ -2,6 +2,8 @@
 VELOREN_INSTALL_DIR=$1
 SCRIPT_DIR=$2
 
+echo "JOOJ"
+
 cat <<-'EOF' >"$SCRIPT_DIR"
   #!/bin/bash
   REMOTE_VER="$(curl -s 'https://download.veloren.net/version/linux/aarch64/weekly')"

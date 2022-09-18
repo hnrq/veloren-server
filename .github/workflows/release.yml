@@ -1,0 +1,26 @@
+name: Compile & Release
+on:
+  push:
+    tags:
+      - "*"
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v3
+        name: Checkout
+
+      - name: Install shc
+        run: sudo apt install -y shc
+
+      - name: Compile script
+        run: |
+          shc -f install.sh
+          mv install.sh.x install
+
+      - uses: ncipollo/release-action@v1
+        name: Create release
+        with:
+          artifacts: "install"
