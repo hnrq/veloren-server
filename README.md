@@ -2,6 +2,8 @@ This is a tool for setting up a Systemd veloren server w/ a single command on a 
 
 - [Installation](#installation)
   - [\[OPTIONAL\] Install Telegram Oracle](#optional-install-telegram-oracle)
+  - [Uninstalling](#uninstalling)
+    - [Uninstalling Telegram Oracle](#uninstalling-telegram-oracle)
   - [Why is sudo needed?](#why-is-sudo-needed)
 - [Hosting at Oracle Cloud](#hosting-at-oracle-cloud)
   - [Create an account](#create-an-account)
@@ -21,6 +23,20 @@ curl -o- https://raw.githubusercontent.com/hnrq/veloren-server-arm/main/install.
 
 ```sh
 curl -o- https://raw.githubusercontent.com/hnrq/veloren-server-arm/main/telegram-oracle.sh | sudo sh
+```
+
+### Uninstalling
+
+To uninstall the server, run:
+
+```sh
+curl -o- https://raw.githubusercontent.com/hnrq/veloren-server-arm/main/install.sh | sudo sh -- --purge
+```
+
+#### Uninstalling Telegram Oracle
+
+```sh
+curl -o- https://raw.githubusercontent.com/hnrq/veloren-server-arm/main/telegram-oracle.sh  | sudo sh -- --purge
 ```
 
 ### Why is sudo needed?
