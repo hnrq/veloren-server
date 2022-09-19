@@ -1,19 +1,28 @@
 #!/bin/sh
-KEY_PATH="/etc/telegram/key"
-MESSAGE_SENDER_PATH="/usr/bin/telegram-oracle-report"
-SERVICE_STATUS_PATH="/usr/bin/telegram-service-status"
+KEY_PATH="$HOME/.telegram-oracle-key"
+MESSAGE_SENDER_PATH="$HOME/bin/telegram-oracle-report"
+SERVICE_STATUS_PATH="$HOME/bin/telegram-service-status"
 SERVICE_NAME="telegram-oracle.service"
+SERVICE_PATH="/etc/systemd/system/$SERVICE_NAME"
+
+check_privileges() {
+	if [ "$(id -u)" != 0 ]; then
+		printf "\e[31m\e[1mThis script needs to be run as root for creating systemd services.\e[0m\n"
+		exit
+	fi
+}
 
 setup_keys() {
-	printf "\nCreating Telegram API key file..."
-	read -r "Please enter the file path for saving your keys (default: $KEY_PATH): " KEY_PATH
-	mkdir -p "$(dirname "$KEY_PATH")" && touch "$KEY_PATH"
+	printf "\nCreating Telegram API key file at %s..." "$KEY_PATH"
+	mkdir -p "$(dirname "$KEY_PATH")"
 	printf "API_KEY=%s\nCHAT_ID=%s\n" "$API_KEY" "$CHAT_ID" >"$KEY_PATH"
-	printf "\e[32m\e[1mDone!\e[0m"
+	printf "\e[32m\e[1mDone\e[0m"
 }
 
 setup_message_sender() {
 	printf "\nCreating Telegram message sender script..."
+
+	mkdir -p "$(dirname "$SERVICE_STATUS_PATH")"
 
 	cat <<-EOF >"$MESSAGE_SENDER_PATH"
 		#!/bin/sh
@@ -24,26 +33,34 @@ setup_message_sender() {
 
 	chmod +x "$MESSAGE_SENDER_PATH"
 
-	printf "\e[32m\e[1mDone!\e[0m"
+	printf "\e[32m\e[1mDone\e[0m"
 }
 
 setup_service_status() {
+	printf "\nCreating Service status reporter script..."
+
+	mkdir -p "$(dirname "$SERVICE_STATUS_PATH")"
+
 	cat <<-EOF >"$SERVICE_STATUS_PATH"
 		#!/bin/sh
 		UNIT=\$1
 		$MESSAGE_SENDER_PATH "\u26A0\uFE0F Unit failed \$UNIT \u26A0\uFE0F $(systemctl status "\$UNIT")"
 	EOF
+
+	chmod +x "$SERVICE_STATUS_PATH"
+
+	printf "\e[32m\e[1mDone\e[0m"
 }
 
 setup_oracle_service() {
-	cat <<-"EOF" >"/etc/systemd/system/$SERVICE_NAME"
+	cat <<-"EOF" >"$SERVICE_PATH"
 		[Unit]
 		Description=Unit Status Telegram Service
 		After=network.target
 
 		[Service]
 		Type=simple
-		ExecStart=/usr/bin/unit-status-telegram %I
+		ExecStart=$HOME/bin/unit-status-telegram %I
 	EOF
 
 	systemctl enable "$SERVICE_NAME"
@@ -56,4 +73,4 @@ setup_keys
 setup_message_sender
 setup_unit_status
 
-sed -i '/^StartLimitIntervalSec=0/a OnFailure=unit-status-telegram@%n.service' /etc/systemd/system/veloren-server.service
+sed -i '/^StartLimitIntervalSec=0/a OnFailure=unit-status-telegram@%n.service' "$HOME/.config/systemd/user/veloren-server.service"
