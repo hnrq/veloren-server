@@ -1,32 +1,36 @@
 #!/bin/sh
-VELOREN_INSTALL_DIR="/usr/veloren-server" # this is where the server files will be installed
+VELOREN_INSTALL_DIR="/usr/veloren-server"           # this is where the server files will be installed
+UPDATE_SCRIPT_PATH="/usr/bin/update_veloren_server" # this is where the update script will be installed
+SERVICE_DIR="/etc/systemd/system"                   # this is where the systemd services will be added
+SERVICE_NAME="veloren-server"                       # this is the systemd service name
 
 check_privileges() {
 	if [ "$(id -u)" != 0 ]; then
-		printf "Please run as root"
+		printf "\e[31m\e[1mThis script needs to be run as root for creating systemd services.\e[0m\n"
 		exit
 	fi
 }
 
 setup_update_script() {
-	SCRIPT_PATH="/usr/bin/update_veloren_server" # this is where the update script will be installed
-	INSTALL_DIR=$1
-	printf "\nCreating update script at %s..." "$SCRIPT_PATH"
+	printf "\nCreating update script at %s..." "$UPDATE_SCRIPT_PATH"
 
-	cat <<-'EOF' >"$SCRIPT_PATH"
+	mkdir -p "$(dirname "$UPDATE_SCRIPT_PATH")"
+
+	cat <<-'EOF' >"$UPDATE_SCRIPT_PATH"
 		#!/bin/bash
 		REMOTE_VER="$(curl -s 'https://download.veloren.net/version/linux/aarch64/weekly')"
 		FORCE_UPDATE="false"
 		FILENAME="veloren-aarch64"
 	EOF
 
-	cat <<-EOF >>"$SCRIPT_PATH"
-		INSTALL_DIR=$INSTALL_DIR
+	cat <<-EOF >>"$UPDATE_SCRIPT_PATH"
+		VELOREN_INSTALL_DIR=$VELOREN_INSTALL_DIR
 	EOF
 
-	cat <<-'EOF' >>"$SCRIPT_PATH"
+	cat <<-'EOF' >>"$UPDATE_SCRIPT_PATH"
 
-		mkdir -p $INSTALL_DIR
+		mkdir -p $VELOREN_INSTALL_DIR
+		touch $VELOREN_INSTALL_DIR/version
 
 		while test "$#" -gt 0; do
 			case "$1" in
@@ -40,32 +44,30 @@ setup_update_script() {
 			esac
 		done
 
-		if [[ $REMOTE_VER = "$(cat $INSTALL_DIR/version)" && $FORCE_UPDATE == "false" ]]; then
-				print -e "\e[32m\e[1mYour server is up-to-date!\e[0m"
+		if [[ $REMOTE_VER = "$(cat $VELOREN_INSTALL_DIR/version)" && $FORCE_UPDATE == "false" ]]; then
+				print -e "\n\e[32m\e[1mYour server is up-to-date!\e[0m"
 		else
-				printf "Downloading latest Veloren server version..."
-				curl -sSL -o "$INSTALL_DIR/$FILENAME" --connect-timeout 30 --max-time 30 --retry 300 --retry-delay 5 'https://download.veloren.net/latest/linux/aarch64/weekly'
-				unzip -qo "$INSTALL_DIR/$FILENAME" && rm $INSTALL_DIR/$FILENAME
+				printf "\nDownloading Veloren server version %s...\n" "$REMOTE_VER"
+				curl -#L -o "$VELOREN_INSTALL_DIR/$FILENAME" --connect-timeout 30 --max-time 30 --retry 300 --retry-delay 5 'https://download.veloren.net/latest/linux/aarch64/weekly'
+				unzip -qo "$VELOREN_INSTALL_DIR/$FILENAME" -d "$VELOREN_INSTALL_DIR" && rm $VELOREN_INSTALL_DIR/$FILENAME
 
-				systemctl restart veloren-server.service
+				# Restart System
+				if [[ $(systemctl list-units --all -t service --full --no-legend "$SERVICE_NAME@$USER.service" | sed 's/^\s*//g' | cut -f1 -d' ') == $SERVICE_NAME@$USER.service ]]; then
+					systemctl restart "$SERVICE_NAME@$USER.service"
+				fi
 
-				print -e "\e[32m\e[1mSuccessfully updated server to latest version (%s)\e[0m" "$REMOTE_VER"
-				print "$REMOTE_VER" > "$INSTALL_DIR/version"
+				printf "\e[32m\e[1mSuccessfully downloaded latest version (%s)\e[0m" "$REMOTE_VER"
+				printf "%s" "$REMOTE_VER" > "$VELOREN_INSTALL_DIR/version"
 		fi
 	EOF
-
-	chmod +x $SCRIPT_PATH
-	$SCRIPT_PATH -f # run the script once to download the server files
-	printf "\e[32m\e[1mDone!\e[0m"
+	chmod +x "$UPDATE_SCRIPT_PATH"
+	$UPDATE_SCRIPT_PATH -f # run the script once to download the server files
 }
 
 setup_systemd_services() {
-	INSTALL_DIR=$1
-	SERVICE_DIR=/etc/systemd/system
-
 	printf "\nCreating systemd service files..."
 
-	cat <<-EOF >"$SERVICE_DIR/veloren-server.service"
+	cat <<-EOF >"$SERVICE_DIR/$SERVICE_NAME.service"
 		[Unit]
 		Description=Veloren Server
 		After=network.target
@@ -73,56 +75,56 @@ setup_systemd_services() {
 
 		[Service]
 		Type=simple
-		WorkingDirectory=$INSTALL_DIR
-		ExecStart=$INSTALL_DIR/veloren-server-cli
+		WorkingDirectory=$VELOREN_INSTALL_DIR
+		ExecStart=$VELOREN_INSTALL_DIR/veloren-server-cli
 
 		[Install]
 		WantedBy=multi-user.target
 	EOF
 
-	cat <<-EOF >"$SERVICE_DIR/veloren-server.timer"
+	cat <<-EOF >"$SERVICE_DIR/$SERVICE_NAME.timer"
 		[Unit]
 		Description=Run update_veloren_server periodically
 
 		[Timer]
-		Unit=oneshot-update-veloren.service
+		Unit="oneshot-update-$SERVICE_NAME.service"
 		OnCalendar=*:0/15
 
 		[Install]
 		WantedBy=timers.target
 	EOF
 
-	cat <<-EOF >"$SERVICE_DIR/oneshot-update-veloren.service"
+	cat <<-EOF >"$SERVICE_DIR/oneshot-update-$SERVICE_NAME.service"
 		[Unit]
 		Description=One shot update Veloren server service
 
 		[Service]
 		Type=oneshot
-		ExecStart=/usr/bin/update_veloren_server
+		ExecStart=$UPDATE_SCRIPT_PATH
 
 		[Install]
 		WantedBy=multi-user.target
 	EOF
 
-	printf "\e[32m\e[1mDone!\e[0m"
+	printf "\e[32m\e[1mDone\e[0m"
 }
 
 enable_systemd_services() {
 	printf "\nEnabling systemd services..."
-	systemctl enable veloren-server.service
-	systemctl start veloren-server.service
+	systemctl enable "$SERVICE_NAME.service"
+	systemctl start "$SERVICE_NAME.service"
 
-	systemctl enable veloren-server.timer
-	systemctl start veloren-server.timer
-	printf "\e[32m\e[1mDone!\e[0m"
+	systemctl enable "$SERVICE_NAME.timer"
+	systemctl start "$SERVICE_NAME.timer"
+	printf "\e[32m\e[1mDone\e[0m"
 }
 
 check_privileges
+
 printf "This is the ARM Veloren server setup script. It will install the Veloren server and configure it to run as a service."
 
-read -r "Please enter the directory you want to install the server to (default: $VELOREN_INSTALL_DIR): " VELOREN_INSTALL_DIR
-VELOREN_INSTALL_DIR=${VELOREN_INSTALL_DIR:-/usr/veloren-server}
-
-setup_update_script "$VELOREN_INSTALL_DIR"
-setup_systemd_services "$VELOREN_INSTALL_DIR"
+setup_update_script
+setup_systemd_services
 enable_systemd_services
+
+printf "Successfully installed Veloren server at %s." "$VELOREN_INSTALL_DIR"
