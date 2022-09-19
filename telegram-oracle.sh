@@ -1,7 +1,7 @@
 #!/bin/sh
-KEY_PATH="$HOME/.telegram-oracle-key"
-MESSAGE_SENDER_PATH="$HOME/bin/telegram-oracle-report"
-SERVICE_STATUS_PATH="$HOME/bin/telegram-service-status"
+KEY_PATH="usr/.telegram-oracle-key"
+MESSAGE_SENDER_PATH="usr/bin/telegram-oracle-report"
+SERVICE_STATUS_PATH="usr/bin/telegram-service-status"
 SERVICE_NAME="telegram-oracle.service"
 SERVICE_PATH="/etc/systemd/system/$SERVICE_NAME"
 
@@ -12,15 +12,15 @@ check_privileges() {
 	fi
 }
 
-setup_keys() {
-	printf "\nCreating Telegram API key file at %s..." "$KEY_PATH"
+create_keys() {
+	printf "Creating Telegram API key file at %s..." "$KEY_PATH"
 	mkdir -p "$(dirname "$KEY_PATH")"
 	printf "API_KEY=%s\nCHAT_ID=%s\n" "$API_KEY" "$CHAT_ID" >"$KEY_PATH"
-	printf "\e[32m\e[1mDone\e[0m"
+	printf "\e[32m\e[1mDone\e[0m\n"
 }
 
-setup_message_sender() {
-	printf "\nCreating Telegram message sender script..."
+create_message_sender() {
+	printf "Creating Telegram message sender script..."
 
 	mkdir -p "$(dirname "$SERVICE_STATUS_PATH")"
 
@@ -33,11 +33,11 @@ setup_message_sender() {
 
 	chmod +x "$MESSAGE_SENDER_PATH"
 
-	printf "\e[32m\e[1mDone\e[0m"
+	printf "\e[32m\e[1mDone\e[0m\n"
 }
 
-setup_service_status() {
-	printf "\nCreating Service status reporter script..."
+create_service_status() {
+	printf "Creating Service status reporter script..."
 
 	mkdir -p "$(dirname "$SERVICE_STATUS_PATH")"
 
@@ -49,10 +49,10 @@ setup_service_status() {
 
 	chmod +x "$SERVICE_STATUS_PATH"
 
-	printf "\e[32m\e[1mDone\e[0m"
+	printf "\e[32m\e[1mDone\e[0m\n"
 }
 
-setup_oracle_service() {
+create_oracle_service() {
 	cat <<-"EOF" >"$SERVICE_PATH"
 		[Unit]
 		Description=Unit Status Telegram Service
@@ -67,10 +67,36 @@ setup_oracle_service() {
 	systemctl start "$SERVICE_NAME"
 }
 
-printf "This is the setup for the server oracle, a tool that sends a message on Telegram if anything goes wrong with your server. If you don't have already, create a bot using @botfather on Telegram.\n\n"
+remove_keys() {
+	rm "$KEY_PATH"
+}
 
-setup_keys
-setup_message_sender
-setup_unit_status
+remove_scripts() {
+	rm "$MESSAGE_SENDER_PATH"
+	rm "$SERVICE_STATUS_PATH"
+}
+
+disable_services() {
+	systemctl stop "$SERVICE_NAME"
+	systemctl disable "$SERVICE_NAME"
+
+	rm "$SERVICE_PATH"
+}
+
+install() {
+	create_keys
+	create_message_sender
+	create_unit_status
+
+	printf "\n\e[32m\e[1mSuccessfully installed Telegram oracle.\e[0m"
+}
+
+purge() {
+	remove_keys
+	remove_scripts
+	disable_services
+}
+
+printf "This is the setup for the server oracle, a tool that sends a message on Telegram if anything goes wrong with your server. If you don't have already, create a bot using @botfather on Telegram.\n\n"
 
 sed -i '/^StartLimitIntervalSec=0/a OnFailure=unit-status-telegram@%n.service' "$HOME/.config/systemd/user/veloren-server.service"
