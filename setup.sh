@@ -11,7 +11,7 @@ check_privileges() {
 	fi
 }
 
-setup_update_script() {
+create_update_script() {
 	printf "\nCreating update script at %s..." "$UPDATE_SCRIPT_PATH"
 
 	mkdir -p "$(dirname "$UPDATE_SCRIPT_PATH")"
@@ -64,7 +64,7 @@ setup_update_script() {
 	$UPDATE_SCRIPT_PATH -f # run the script once to download the server files
 }
 
-setup_systemd_services() {
+create_systemd_services() {
 	printf "\nCreating systemd service files..."
 
 	cat <<-EOF >"$SERVICE_DIR/$SERVICE_NAME.service"
@@ -119,12 +119,46 @@ enable_systemd_services() {
 	printf "\e[32m\e[1mDone\e[0m"
 }
 
+disable_services() {
+	systemctl stop "$SERVICE_NAME.service"
+	systemctl stop "$SERVICE_NAME.timer"
+	systemctl stop "oneshot-update-$SERVICE_NAME.service"
+	systemctl disable "$SERVICE_NAME.service"
+	systemctl disable "$SERVICE_NAME.timer"
+	systemctl disable "oneshot-update-$SERVICE_NAME.service"
+
+	rm "$SERVICE_DIR/$SERVICE_NAME.service" "$SERVICE_DIR/$SERVICE_NAME.timer" "$SERVICE_DIR/oneshot-update-$SERVICE_NAME.service"
+}
+
+remove_update_script() {
+	rm "$UPDATE_SCRIPT_PATH"
+}
+
+remove_server_files() {
+	rm -rf "$VELOREN_INSTALL_DIR"
+}
+
+purge() {
+	disable_services
+	remove_update_script
+
+	printf "\e[32m\e[1mSuccessfully purged Veloren server.\e[0m"
+}
+
+install() {
+	printf "This is the ARM Veloren server setup script. It will install the Veloren server and configure it to run as a service.\n"
+
+	create_update_script
+	create_systemd_services
+	enable_systemd_services
+
+	printf "\e[32m\e[1mSuccessfully installed Veloren server at %s.\e[0m" "$VELOREN_INSTALL_DIR"
+}
+
 check_privileges
 
-printf "This is the ARM Veloren server setup script. It will install the Veloren server and configure it to run as a service."
-
-setup_update_script
-setup_systemd_services
-enable_systemd_services
-
-printf "Successfully installed Veloren server at %s." "$VELOREN_INSTALL_DIR"
+if [ "$1" = --purge ]; then
+	purge
+else
+	install
+fi
