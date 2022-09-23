@@ -3,10 +3,11 @@ VELOREN_INSTALL_DIR="/usr/veloren-server"           # this is where the server f
 UPDATE_SCRIPT_PATH="/usr/bin/update_veloren_server" # this is where the update script will be installed
 SERVICE_DIR="/etc/systemd/system"                   # this is where the systemd services will be added
 SERVICE_NAME="veloren-server"                       # this is the systemd service name
+ARCHITECTURE=$(uname -m)
 
 check_privileges() {
 	if [ "$(id -u)" != 0 ]; then
-		printf "\e[31m\e[1mThis script needs to be run as root for creating systemd services.\e[0m\n"
+		printf "\e[31m\e[1mThis script needs to be run as root.\e[0m\n"
 		exit
 	fi
 }
@@ -16,11 +17,12 @@ create_update_script() {
 
 	mkdir -p "$(dirname "$UPDATE_SCRIPT_PATH")"
 
-	cat <<-'EOF' >"$UPDATE_SCRIPT_PATH"
+	cat <<-EOF >"$UPDATE_SCRIPT_PATH"
 		#!/bin/bash
-		REMOTE_VER="$(curl -s 'https://download.veloren.net/version/linux/aarch64/weekly')"
+		REMOTE_VER=$(curl -s "https://download.veloren.net/version/linux/$ARCHITECTURE/weekly")
 		FORCE_UPDATE="false"
-		FILENAME="veloren-aarch64"
+		FILENAME="veloren-$ARCHITECTURE"
+		ARCHITECTURE="$ARCHITECTURE"
 	EOF
 
 	cat <<-EOF >>"$UPDATE_SCRIPT_PATH"
@@ -45,15 +47,15 @@ create_update_script() {
 		done
 
 		if [[ $REMOTE_VER = "$(cat $VELOREN_INSTALL_DIR/version)" && $FORCE_UPDATE == "false" ]]; then
-				print -e "\n\e[32m\e[1mYour server is up-to-date!\e[0m"
+				printf "\n\e[32m\e[1mYour server is up-to-date!\e[0m"
 		else
 				printf "\nDownloading Veloren server version %s...\n" "$REMOTE_VER"
-				curl -#L -o "$VELOREN_INSTALL_DIR/$FILENAME" --connect-timeout 30 --max-time 30 --retry 300 --retry-delay 5 'https://download.veloren.net/latest/linux/aarch64/weekly'
+				curl -#L -o "$VELOREN_INSTALL_DIR/$FILENAME" --connect-timeout 30 --max-time 30 --retry 300 --retry-delay 5 "https://download.veloren.net/latest/linux/$ARCHITECTURE/weekly"
 				unzip -qo "$VELOREN_INSTALL_DIR/$FILENAME" -d "$VELOREN_INSTALL_DIR" && rm $VELOREN_INSTALL_DIR/$FILENAME
 
 				# Restart System
-				if [[ $(systemctl list-units --all -t service --full --no-legend "$SERVICE_NAME@$USER.service" | sed 's/^\s*//g' | cut -f1 -d' ') == $SERVICE_NAME@$USER.service ]]; then
-					systemctl restart "$SERVICE_NAME@$USER.service"
+				if [[ $(systemctl list-units --all -t service --full --no-legend "$SERVICE_NAME.service" | sed 's/^\s*//g' | cut -f1 -d' ') == $SERVICE_NAME.service ]]; then
+					systemctl restart "$SERVICE_NAME.service"
 				fi
 
 				printf "\e[32m\e[1mSuccessfully downloaded latest version (%s)\e[0m" "$REMOTE_VER"
@@ -61,22 +63,44 @@ create_update_script() {
 		fi
 	EOF
 	chmod +x "$UPDATE_SCRIPT_PATH"
-	$UPDATE_SCRIPT_PATH -f # run the script once to download the server files
+	$UPDATE_SCRIPT_PATH # run the script once to download the server files
 }
 
 create_systemd_services() {
 	printf "\nCreating systemd service files..."
 
+	cat <<-EOF >"$SERVICE_DIR/$SERVICE_NAME.socket"
+		[Unit]
+		BindsTo=$SERVICE_NAME.service
+
+		[Socket]
+		ListenFIFO=%t/$SERVICE_NAME.stdin
+		Service=$SERVICE_NAME.service
+		RemoveOnStop=true
+		SocketMode=0600
+	EOF
+
 	cat <<-EOF >"$SERVICE_DIR/$SERVICE_NAME.service"
 		[Unit]
 		Description=Veloren Server
 		After=network.target
-		StartLimitIntervalSec=0
 
 		[Service]
 		Type=simple
 		WorkingDirectory=$VELOREN_INSTALL_DIR
-		ExecStart=$VELOREN_INSTALL_DIR/veloren-server-cli
+		ExecStart=/bin/sh -c "$VELOREN_INSTALL_DIR/veloren-server-cli"
+		ExecStop=/bin/sh -c "echo 'shutdown graceful 60' >/run/$SERVICE_NAME.stdin"
+
+		Sockets=$SERVICE_NAME.socket
+		StandardInput=socket
+		StandardOutput=journal
+		StandardError=journal
+
+		Restart=on-failure
+		RestartSec=60s
+
+		# this is necessary to keep systemd from killing the process before it exits after ExecStop is called
+		KillSignal=SIGCONT
 
 		[Install]
 		WantedBy=multi-user.target
@@ -116,6 +140,7 @@ enable_systemd_services() {
 
 	systemctl enable "$SERVICE_NAME.timer"
 	systemctl start "$SERVICE_NAME.timer"
+	systemctl daemon-reload
 	printf "\e[32m\e[1mDone\e[0m"
 }
 
@@ -127,7 +152,7 @@ disable_services() {
 	systemctl disable "$SERVICE_NAME.timer"
 	systemctl disable "oneshot-update-$SERVICE_NAME.service"
 
-	rm "$SERVICE_DIR/$SERVICE_NAME.service" "$SERVICE_DIR/$SERVICE_NAME.timer" "$SERVICE_DIR/oneshot-update-$SERVICE_NAME.service"
+	find "$SERVICE_DIR" -type f -name "*$SERVICE_NAME*" -delete
 }
 
 remove_update_script() {
@@ -141,18 +166,19 @@ remove_server_files() {
 purge() {
 	disable_services
 	remove_update_script
+	remove_server_files
 
 	printf "\e[32m\e[1mSuccessfully purged Veloren server.\e[0m"
 }
 
 install() {
-	printf "This is the ARM Veloren server setup script. It will install the Veloren server and configure it to run as a service.\n"
+	printf "This is the Systemd Veloren server setup script. It will install the Veloren server and configure it to run as a daemon service.\n"
 
 	create_update_script
 	create_systemd_services
 	enable_systemd_services
 
-	printf "\e[32m\e[1mSuccessfully installed Veloren server at %s.\e[0m" "$VELOREN_INSTALL_DIR"
+	printf "\n\e[32m\e[1mSuccessfully installed Veloren server at %s.\e[0m" "$VELOREN_INSTALL_DIR"
 }
 
 check_privileges
