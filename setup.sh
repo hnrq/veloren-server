@@ -145,6 +145,7 @@ enable_systemd_services() {
 }
 
 disable_services() {
+	echo "shutdown immediate" >"/run/$SERVICE_NAME.stdin"
 	systemctl stop "$SERVICE_NAME.service"
 	systemctl stop "$SERVICE_NAME.timer"
 	systemctl stop "oneshot-update-$SERVICE_NAME.service"
