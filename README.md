@@ -1,4 +1,4 @@
-This is a tool for setting up a Systemd veloren server w/ a single command on a RPi (aarch64). Optionally, it is also possible to setup an oracle that sends you a message on Telegram if anything goes wrong with the server.
+This is a tool for setting up a Systemd veloren server w/ a single command. Optionally, it is also possible to setup an oracle that sends you a message on Telegram if anything goes wrong with the server.
 
 - [Installation](#installation)
   - [\[OPTIONAL\] Install Telegram Oracle](#optional-install-telegram-oracle)
