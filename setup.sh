@@ -1,9 +1,8 @@
 #!/bin/sh
 VELOREN_INSTALL_DIR="/usr/veloren-server"           # this is where the server files will be installed
-UPDATE_SCRIPT_PATH="/usr/bin/update_veloren_server" # this is where the update script will be installed
+UPDATE_SCRIPT_PATH="/usr/bin/update-veloren-server" # this is where the update script will be installed
 SERVICE_DIR="/etc/systemd/system"                   # this is where the systemd services will be added
 SERVICE_NAME="veloren-server"                       # this is the systemd service name
-ARCHITECTURE=$(uname -m)
 
 check_privileges() {
 	if [ "$(id -u)" != 0 ]; then
@@ -17,51 +16,53 @@ create_update_script() {
 
 	mkdir -p "$(dirname "$UPDATE_SCRIPT_PATH")"
 
-	cat <<-EOF >"$UPDATE_SCRIPT_PATH"
+	cat <<-'EOF' >"$UPDATE_SCRIPT_PATH"
 		#!/bin/bash
-		REMOTE_VER=$(curl -s "https://download.veloren.net/version/linux/$ARCHITECTURE/weekly")
 		FORCE_UPDATE="false"
+		ARCHITECTURE="$(uname -m)"
 		FILENAME="veloren-$ARCHITECTURE"
-		ARCHITECTURE="$ARCHITECTURE"
+		REMOTE_VER="$(curl -s "https://download.veloren.net/version/linux/$ARCHITECTURE/weekly")"
 	EOF
 
-	cat <<-EOF >>"$UPDATE_SCRIPT_PATH"
-		VELOREN_INSTALL_DIR=$VELOREN_INSTALL_DIR
-	EOF
+	{
+		cat <<-EOF
+			VELOREN_INSTALL_DIR=$VELOREN_INSTALL_DIR
+		EOF
+		cat <<-'EOF'
 
-	cat <<-'EOF' >>"$UPDATE_SCRIPT_PATH"
+			mkdir -p $VELOREN_INSTALL_DIR
+			touch $VELOREN_INSTALL_DIR/version
 
-		mkdir -p $VELOREN_INSTALL_DIR
-		touch $VELOREN_INSTALL_DIR/version
+			while test "$#" -gt 0; do
+				case "$1" in
+				-f|--force) 
+							FORCE_UPDATE="true"
+							shift
+							;;
+					*)
+							break
+							;;
+				esac
+			done
 
-		while test "$#" -gt 0; do
-			case "$1" in
-			-f|--force) 
-						FORCE_UPDATE="true"
-						shift
-						;;
-				*)
-						break
-						;;
-			esac
-		done
+			if [[ $REMOTE_VER = "$(cat $VELOREN_INSTALL_DIR/version 2>/dev/null)" && $FORCE_UPDATE == "false" ]]; then
+					printf "\n\e[32m\e[1mYour server is up-to-date!\e[0m"
+			else
+					printf "\nDownloading Veloren server version %s...\n" "$REMOTE_VER"
+					curl -#L -o "$VELOREN_INSTALL_DIR/$FILENAME" --connect-timeout 30 --max-time 30 --retry 300 --retry-delay 5 "https://download.veloren.net/latest/linux/$ARCHITECTURE/weekly"
+					unzip -qo "$VELOREN_INSTALL_DIR/$FILENAME" -d "$VELOREN_INSTALL_DIR" && rm $VELOREN_INSTALL_DIR/$FILENAME
 
-		if [[ $REMOTE_VER = "$(cat $VELOREN_INSTALL_DIR/version)" && $FORCE_UPDATE == "false" ]]; then
-				printf "\n\e[32m\e[1mYour server is up-to-date!\e[0m"
-		else
-				printf "\nDownloading Veloren server version %s...\n" "$REMOTE_VER"
-				curl -#L -o "$VELOREN_INSTALL_DIR/$FILENAME" --connect-timeout 30 --max-time 30 --retry 300 --retry-delay 5 "https://download.veloren.net/latest/linux/$ARCHITECTURE/weekly"
-				unzip -qo "$VELOREN_INSTALL_DIR/$FILENAME" -d "$VELOREN_INSTALL_DIR" && rm $VELOREN_INSTALL_DIR/$FILENAME
+					# Restart System
+					if [[ $(systemctl list-units --all -t service --full --no-legend "$SERVICE_NAME.service" | sed 's/^\s*//g' | cut -f1 -d' ') == $SERVICE_NAME.service ]]; then
+						systemctl restart "$SERVICE_NAME.service"
+					fi
 
-				# Restart System
-				if [[ $(systemctl list-units --all -t service --full --no-legend "$SERVICE_NAME.service" | sed 's/^\s*//g' | cut -f1 -d' ') == $SERVICE_NAME.service ]]; then
-					systemctl restart "$SERVICE_NAME.service"
-				fi
+					printf "\e[32m\e[1mSuccessfully downloaded latest version (%s)\e[0m" "$REMOTE_VER"
+					printf "%s" "$REMOTE_VER" > "$VELOREN_INSTALL_DIR/version"
+			fi
+		EOF
+	} >>"$UPDATE_SCRIPT_PATH"
 
-				printf "\e[32m\e[1mSuccessfully downloaded latest version (%s)\e[0m" "$REMOTE_VER"
-				printf "%s" "$REMOTE_VER" > "$VELOREN_INSTALL_DIR/version"
-		fi
-	EOF
 	chmod +x "$UPDATE_SCRIPT_PATH"
 	$UPDATE_SCRIPT_PATH # run the script once to download the server files
 }
@@ -108,7 +109,7 @@ create_systemd_services() {
 
 	cat <<-EOF >"$SERVICE_DIR/$SERVICE_NAME.timer"
 		[Unit]
-		Description=Run update_veloren_server periodically
+		Description=Run update-veloren-server periodically
 
 		[Timer]
 		Unit="oneshot-update-$SERVICE_NAME.service"
