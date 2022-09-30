@@ -88,7 +88,7 @@ install() {
 	create_message_sender
 	create_unit_status
 
-	printf "\n\e[32m\e[1mSuccessfully installed Telegram oracle.\e[0m"
+	printf "\e[32m\e[1mSuccessfully installed Telegram oracle.\e[0m\n"
 }
 
 purge() {

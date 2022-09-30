@@ -46,7 +46,7 @@ create_update_script() {
 			done
 
 			if [[ $REMOTE_VER = "$(cat $VELOREN_INSTALL_DIR/version 2>/dev/null)" && $FORCE_UPDATE == "false" ]]; then
-					printf "\n\e[32m\e[1mYour server is up-to-date!\e[0m"
+					printf "\n\e[32m\e[1mYour server is up-to-date!\e[0m\n"
 			else
 					printf "\nDownloading Veloren server version %s...\n" "$REMOTE_VER"
 					curl -#L -o "$VELOREN_INSTALL_DIR/$FILENAME" --connect-timeout 30 --max-time 30 --retry 300 --retry-delay 5 "https://download.veloren.net/latest/linux/$ARCHITECTURE/weekly"
@@ -57,7 +57,7 @@ create_update_script() {
 						systemctl restart "$SERVICE_NAME.service"
 					fi
 
-					printf "\e[32m\e[1mSuccessfully downloaded latest version (%s)\e[0m" "$REMOTE_VER"
+					printf "\e[32m\e[1mSuccessfully downloaded latest version (%s)\e[0m\n" "$REMOTE_VER"
 					printf "%s" "$REMOTE_VER" > "$VELOREN_INSTALL_DIR/version"
 			fi
 		EOF
@@ -68,7 +68,7 @@ create_update_script() {
 }
 
 create_systemd_services() {
-	printf "\nCreating systemd service files..."
+	printf "Creating systemd service files..."
 
 	cat <<-EOF >"$SERVICE_DIR/$SERVICE_NAME.socket"
 		[Unit]
@@ -131,18 +131,18 @@ create_systemd_services() {
 		WantedBy=multi-user.target
 	EOF
 
-	printf "\e[32m\e[1mDone\e[0m"
+	printf "\e[32m\e[1mDone\e[0m\n"
 }
 
 enable_systemd_services() {
-	printf "\nEnabling systemd services..."
+	printf "Enabling systemd services..."
 	systemctl enable "$SERVICE_NAME.service"
 	systemctl start "$SERVICE_NAME.service"
 
 	systemctl enable "$SERVICE_NAME.timer"
 	systemctl start "$SERVICE_NAME.timer"
 	systemctl daemon-reload
-	printf "\e[32m\e[1mDone\e[0m"
+	printf "\e[32m\e[1mDone\e[0m\n"
 }
 
 disable_services() {
@@ -170,7 +170,7 @@ purge() {
 	remove_update_script
 	remove_server_files
 
-	printf "\e[32m\e[1mSuccessfully purged Veloren server.\e[0m"
+	printf "\e[32m\e[1mSuccessfully purged Veloren server.\e[0m\n"
 }
 
 install() {
@@ -180,7 +180,7 @@ install() {
 	create_systemd_services
 	enable_systemd_services
 
-	printf "\n\e[32m\e[1mSuccessfully installed Veloren server at %s.\e[0m" "$VELOREN_INSTALL_DIR"
+	printf "\e[32m\e[1mSuccessfully installed Veloren server at %s.\e[0m\n" "$VELOREN_INSTALL_DIR"
 }
 
 check_privileges
