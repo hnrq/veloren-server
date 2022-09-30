@@ -16,13 +16,15 @@ This is a tool for setting up a Systemd veloren server w/ a single command. Opti
 For installing the server, run:
 
 ```sh
-curl -o- https://raw.githubusercontent.com/hnrq/veloren-server-arm/main/install.sh | sudo sh
+curl -o- https://raw.githubusercontent.com/hnrq/veloren-server/main/setup.sh | sudo sh
 ```
 
 ### \[OPTIONAL\] Install Telegram Oracle
 
+Telegram Oracle is a small utility to receive messages if anything goes wrong with your server. To install it, run:
+
 ```sh
-curl -o- https://raw.githubusercontent.com/hnrq/veloren-server-arm/main/telegram-oracle.sh | sudo sh
+curl -o- https://raw.githubusercontent.com/hnrq/veloren-server/main/telegram-oracle.sh | sudo sh
 ```
 
 ### Uninstalling
@@ -30,13 +32,13 @@ curl -o- https://raw.githubusercontent.com/hnrq/veloren-server-arm/main/telegram
 To uninstall the server, run:
 
 ```sh
-curl -o- https://raw.githubusercontent.com/hnrq/veloren-server-arm/main/install.sh | sudo sh -- --purge
+curl -o- https://raw.githubusercontent.com/hnrq/veloren-server/main/setup.sh | sudo sh -- --purge
 ```
 
 #### Uninstalling Telegram Oracle
 
 ```sh
-curl -o- https://raw.githubusercontent.com/hnrq/veloren-server-arm/main/telegram-oracle.sh  | sudo sh -- --purge
+curl -o- https://raw.githubusercontent.com/hnrq/veloren-server/main/telegram-oracle.sh  | sudo sh -- --purge
 ```
 
 ### Why is sudo needed?
