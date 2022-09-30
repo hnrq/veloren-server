@@ -27,6 +27,7 @@ create_update_script() {
 	{
 		cat <<-EOF
 			VELOREN_INSTALL_DIR=$VELOREN_INSTALL_DIR
+			SERVICE_NAME=$SERVICE_NAME
 		EOF
 		cat <<-'EOF'
 
