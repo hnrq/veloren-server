@@ -11,6 +11,22 @@ check_privileges() {
 	fi
 }
 
+check_dependencies() {
+	DEPENDENCIES="unzip"
+	DEPENDENCIES_MISSING=0
+	for DEPENDENCY in ${DEPENDENCIES}; do
+		if ! command -v "${DEPENDENCY}" >/dev/null 2>&1; then
+			printf "\e[31m\e[1mDependency %s could not be found\e[0m\n" "$DEPENDENCY"
+			DEPENDENCIES_MISSING=1
+		fi
+	done
+
+	if [ $DEPENDENCIES_MISSING = 1 ]; then
+		printf "\e[31m\e[1mSome dependencies need to be installed before running\e[0m\n"
+		exit
+	fi
+}
+
 create_update_script() {
 	printf "\nCreating update script at %s..." "$UPDATE_SCRIPT_PATH"
 
@@ -177,6 +193,7 @@ purge() {
 install() {
 	printf "This is the Systemd Veloren server setup script. It will install the Veloren server and configure it to run as a daemon service.\n"
 
+	check_dependencies
 	create_update_script
 	create_systemd_services
 	enable_systemd_services

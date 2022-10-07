@@ -13,9 +13,11 @@ This is a tool for setting up a Systemd veloren server w/ a single command. Opti
 
 ## Installation
 
+The server will be downloaded as a ZIP, hence, it depends on unzip to be installed on your machine.
 For installing the server, run:
 
 ```sh
+sudo apt install unzip -y
 curl -o- https://raw.githubusercontent.com/hnrq/veloren-server/main/setup.sh | sudo sh
 ```
 
@@ -43,11 +45,12 @@ curl -o- https://raw.githubusercontent.com/hnrq/veloren-server/main/telegram-ora
 
 ### Why is sudo needed?
 
-Sudo is needed since three systemd services will be created when installing the server itself:
+Sudo is needed since three systemd services are created and a script is installed at `/usr/bin`:
 
 - `veloren-server.service`: Responsible for starting the server itself
 - `oneshot-update-veloren-server.service`: oneshot service that triggers an update-check
 - `veloren-server.timer`: Triggers `oneshot-update-veloren-server.service` every 15 minutes
+- `/usr/bin/update-veloren-server`: This is the script responsible for downloading, unzipping and updating the server. It can also force an update by running `update-veloren-server -f`
 
 The Telegram Oracle also creates `telegram-oracle.service`, which monitors `veloren-server.service`.
 
