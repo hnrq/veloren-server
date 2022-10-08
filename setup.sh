@@ -3,6 +3,7 @@ VELOREN_INSTALL_DIR="/usr/veloren-server"           # this is where the server f
 UPDATE_SCRIPT_PATH="/usr/bin/update-veloren-server" # this is where the update script will be installed
 SERVICE_DIR="/etc/systemd/system"                   # this is where the systemd services will be added
 SERVICE_NAME="veloren-server"                       # this is the systemd service name
+UPDATE_SERVICE_NAME="$SERVICE_NAME-update"          # this is the systemd update service name
 
 check_privileges() {
 	if [ "$(id -u)" != 0 ]; then
@@ -124,19 +125,18 @@ create_systemd_services() {
 		WantedBy=multi-user.target
 	EOF
 
-	cat <<-EOF >"$SERVICE_DIR/$SERVICE_NAME.timer"
+	cat <<-EOF >"$SERVICE_DIR/$UPDATE_SERVICE_NAME.timer"
 		[Unit]
 		Description=Run update-veloren-server periodically
 
 		[Timer]
-		Unit="oneshot-update-$SERVICE_NAME.service"
 		OnCalendar=*:0/15
 
 		[Install]
 		WantedBy=timers.target
 	EOF
 
-	cat <<-EOF >"$SERVICE_DIR/oneshot-update-$SERVICE_NAME.service"
+	cat <<-EOF >"$SERVICE_DIR/$UPDATE_SERVICE_NAME.service"
 		[Unit]
 		Description=One shot update Veloren server service
 
@@ -156,8 +156,8 @@ enable_systemd_services() {
 	systemctl enable "$SERVICE_NAME.service"
 	systemctl start "$SERVICE_NAME.service"
 
-	systemctl enable "$SERVICE_NAME.timer"
-	systemctl start "$SERVICE_NAME.timer"
+	systemctl enable "$UPDATE_SERVICE_NAME.timer"
+	systemctl start "$UPDATE_SERVICE_NAME.timer"
 	systemctl daemon-reload
 	printf "\e[32m\e[1mDone\e[0m\n"
 }
@@ -165,11 +165,11 @@ enable_systemd_services() {
 disable_services() {
 	echo "shutdown immediate" >"/run/$SERVICE_NAME.stdin"
 	systemctl stop "$SERVICE_NAME.service"
-	systemctl stop "$SERVICE_NAME.timer"
-	systemctl stop "oneshot-update-$SERVICE_NAME.service"
+	systemctl stop "$UPDATE_SERVICE_NAME.timer"
+	systemctl stop "$UPDATE_SERVICE_NAME.service"
 	systemctl disable "$SERVICE_NAME.service"
-	systemctl disable "$SERVICE_NAME.timer"
-	systemctl disable "oneshot-update-$SERVICE_NAME.service"
+	systemctl disable "$UPDATE_SERVICE_NAME.timer"
+	systemctl disable "$UPDATE_SERVICE_NAME.service"
 
 	find "$SERVICE_DIR" -type f -name "*$SERVICE_NAME*" -delete
 }
