@@ -1,9 +1,9 @@
 #!/bin/sh
-VELOREN_INSTALL_DIR="/usr/veloren-server"           # this is where the server files will be installed
-UPDATE_SCRIPT_PATH="/usr/bin/update-veloren-server" # this is where the update script will be installed
-SERVICE_DIR="/etc/systemd/system"                   # this is where the systemd services will be added
-SERVICE_NAME="veloren-server"                       # this is the systemd service name
-UPDATE_SERVICE_NAME="$SERVICE_NAME-update"          # this is the systemd update service name
+VELOREN_INSTALL_DIR="/usr/veloren-server"          # this is where the server files will be installed
+SERVICE_NAME="veloren-server"                      # this is the systemd service name
+UPDATE_SERVICE_NAME="update-$SERVICE_NAME"         # this is the systemd update service name
+UPDATE_SCRIPT_PATH="/usr/bin/$UPDATE_SERVICE_NAME" # this is where the update script will be installed
+SERVICE_DIR="/etc/systemd/system"                  # this is where the systemd services will be added
 
 check_privileges() {
 	if [ "$(id -u)" != 0 ]; then
