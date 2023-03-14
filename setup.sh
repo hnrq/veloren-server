@@ -1,9 +1,10 @@
 #!/bin/sh
-VELOREN_INSTALL_DIR="/usr/veloren-server"          # this is where the server files will be installed
-SERVICE_NAME="veloren-server"                      # this is the systemd service name
-UPDATE_SERVICE_NAME="update-$SERVICE_NAME"         # this is the systemd update service name
-UPDATE_SCRIPT_PATH="/usr/bin/$UPDATE_SERVICE_NAME" # this is where the update script will be installed
-SERVICE_DIR="/etc/systemd/system"                  # this is where the systemd services will be added
+VELOREN_INSTALL_DIR="/usr/veloren-server"          		# this is where the server files will be installed
+SERVICE_NAME="veloren-server"                      		# this is the systemd service name
+UPDATE_SERVICE_NAME="update-$SERVICE_NAME"         		# this is the systemd update service name
+UPDATE_SCRIPT_PATH="/usr/bin/$UPDATE_SERVICE_NAME" 		# this is where the update script will be installed
+RESTART_SERVICE_NAME="restart-$SERVICE_NAME"			 		# this is the systemd restart service name
+SERVICE_DIR="/etc/systemd/system"                  		# this is where the systemd services will be added
 
 check_privileges() {
 	if [ "$(id -u)" != 0 ]; then
@@ -85,8 +86,74 @@ create_update_script() {
 	$UPDATE_SCRIPT_PATH # run the script once to download the server files
 }
 
-create_systemd_services() {
-	printf "Creating systemd service files..."
+create_restart_services() {
+	printf "Creating restart systemd service files...\n"
+	
+	cat <<-EOF > "$SERVICE_DIR/$RESTART_SERVICE_NAME.service"
+		[Unit]
+		Description=Restart Veloren server periodically
+
+		[Service]
+		Type=oneshot
+		ExecStart=/usr/bin/systemctl restart $SERVICE_NAME
+
+		[Install]
+		WantedBy=multi-user.target
+	EOF
+
+	cat <<-EOF > "$SERVICE_DIR/$RESTART_SERVICE_NAME.timer"
+		[Unit]
+		Description=Run oneshot restart veloren server periodically
+
+		[Timer]
+		Unit=$RESTART_SERVICE_NAME.service
+		OnCalendar=*-*-* 3:30:00
+		OnCalendar=*-*-* 15:30:00
+
+		[Install]
+		WantedBy=timers.target
+	EOF
+
+	systemctl enable "$RESTART_SERVICE_NAME.timer"
+	systemctl start "$RESTART_SERVICE_NAME.timer"
+	
+	printf "\e[32m\e[1mDone\e[0m\n"
+}
+
+create_update_services() {
+	printf "Creating update systemd service files...\n"
+
+	cat <<-EOF >"$SERVICE_DIR/$UPDATE_SERVICE_NAME.timer"
+		[Unit]
+		Description=Run update-veloren-server periodically
+
+		[Timer]
+		OnCalendar=*:0/15
+
+		[Install]
+		WantedBy=timers.target
+	EOF
+
+	cat <<-EOF >"$SERVICE_DIR/$UPDATE_SERVICE_NAME.service"
+		[Unit]
+		Description=One shot update Veloren server service
+
+		[Service]
+		Type=oneshot
+		ExecStart=$UPDATE_SCRIPT_PATH
+
+		[Install]
+		WantedBy=multi-user.target
+	EOF
+
+	systemctl enable "$UPDATE_SERVICE_NAME.timer"
+	systemctl start "$UPDATE_SERVICE_NAME.timer"
+	
+	printf "\e[32m\e[1mDone\e[0m\n"
+}
+
+create_server_services() {
+	printf "Creating server systemd service files...\n"
 
 	cat <<-EOF >"$SERVICE_DIR/$SERVICE_NAME.socket"
 		[Unit]
@@ -125,40 +192,9 @@ create_systemd_services() {
 		WantedBy=multi-user.target
 	EOF
 
-	cat <<-EOF >"$SERVICE_DIR/$UPDATE_SERVICE_NAME.timer"
-		[Unit]
-		Description=Run update-veloren-server periodically
-
-		[Timer]
-		OnCalendar=*:0/15
-
-		[Install]
-		WantedBy=timers.target
-	EOF
-
-	cat <<-EOF >"$SERVICE_DIR/$UPDATE_SERVICE_NAME.service"
-		[Unit]
-		Description=One shot update Veloren server service
-
-		[Service]
-		Type=oneshot
-		ExecStart=$UPDATE_SCRIPT_PATH
-
-		[Install]
-		WantedBy=multi-user.target
-	EOF
-
-	printf "\e[32m\e[1mDone\e[0m\n"
-}
-
-enable_systemd_services() {
-	printf "Enabling systemd services..."
 	systemctl enable "$SERVICE_NAME.service"
 	systemctl start "$SERVICE_NAME.service"
 
-	systemctl enable "$UPDATE_SERVICE_NAME.timer"
-	systemctl start "$UPDATE_SERVICE_NAME.timer"
-	systemctl daemon-reload
 	printf "\e[32m\e[1mDone\e[0m\n"
 }
 
@@ -195,8 +231,11 @@ install() {
 
 	check_dependencies
 	create_update_script
-	create_systemd_services
-	enable_systemd_services
+	create_server_services
+	create_update_services
+	create_restart_services
+
+	systemctl daemon-reload
 
 	printf "\e[32m\e[1mSuccessfully installed Veloren server at %s.\e[0m\n" "$VELOREN_INSTALL_DIR"
 }
